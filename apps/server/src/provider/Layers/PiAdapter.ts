@@ -1538,7 +1538,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
 
       const details = toolRecord(record?.details);
       const providerThreadId =
-        firstStringValue(details, ["id", "paseoAgentId", "name"]) ??
+        firstStringValue(details, ["id", "name"]) ??
         `subagent-message-${crypto.randomUUID()}`;
       const agent = firstStringValue(details, ["agent"]);
       const name = firstStringValue(details, ["name"]);
