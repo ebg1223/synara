@@ -493,14 +493,23 @@ export function recordPiSubagentSessionTranscriptEmission(input: {
   readonly providerThreadId: string;
   readonly sessionFile: string;
   readonly sessionContent: string;
-}): boolean {
+}): "recorded" | "replayed" {
   const transcriptKey = makePiSubagentSessionTranscriptKey(input);
   const contentSignature = stablePiSubagentHash([input.sessionContent]);
   if (input.emittedTranscripts.get(transcriptKey) === contentSignature) {
-    return false;
+    return "replayed";
   }
   input.emittedTranscripts.set(transcriptKey, contentSignature);
-  return true;
+  return "recorded";
+}
+
+type PiSubagentSessionTranscriptImportResult = "emitted" | "replayed" | "unavailable";
+
+export function shouldEmitPiSubagentFallbackTranscript(input: {
+  readonly transcriptResult: PiSubagentSessionTranscriptImportResult;
+  readonly messageText?: string | undefined;
+}): boolean {
+  return input.transcriptResult === "unavailable" && (input.messageText?.length ?? 0) > 0;
 }
 
 export function makePiSubagentSourceKey(input: {
@@ -1488,10 +1497,10 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       readonly promptText?: string | undefined;
       readonly failed: boolean;
       readonly raw: ProviderRuntimeEvent["raw"];
-    }): boolean => {
+    }): PiSubagentSessionTranscriptImportResult => {
       const sessionContent = readBoundedPiSubagentSessionFile(input.sessionFile);
       if (sessionContent === undefined) {
-        return false;
+        return "unavailable";
       }
 
       const childTurnId = makePiSubagentTurnId(input.sourceKey);
@@ -1505,7 +1514,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         return entry ? [entry] : [];
       });
       if (!sessionEntries.some(hasRenderablePiSubagentSessionEntry)) {
-        return false;
+        return "unavailable";
       }
       const hasTranscriptUserMessage = sessionEntries.some((entry) => {
         if (entry?.type !== "message") return false;
@@ -1516,15 +1525,14 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           textFromContent(content as (TextContent | ImageContent)[]).trim().length > 0
         );
       });
-      if (
-        !recordPiSubagentSessionTranscriptEmission({
-          emittedTranscripts: input.context.emittedSubagentSessionTranscripts,
-          providerThreadId: input.providerThreadId,
-          sessionFile: input.sessionFile,
-          sessionContent,
-        })
-      ) {
-        return false;
+      const transcriptEmission = recordPiSubagentSessionTranscriptEmission({
+        emittedTranscripts: input.context.emittedSubagentSessionTranscripts,
+        providerThreadId: input.providerThreadId,
+        sessionFile: input.sessionFile,
+        sessionContent,
+      });
+      if (transcriptEmission === "replayed") {
+        return "replayed";
       }
 
       const sessionStartedAt = sessionLines
@@ -1772,7 +1780,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         raw: transcriptRaw,
       } satisfies ProviderRuntimeEvent);
 
-      return emittedRenderableEvent;
+      return emittedRenderableEvent ? "emitted" : "unavailable";
     };
 
     const emitPiSubagentCustomMessage = (context: PiSessionContext, message: unknown): boolean => {
@@ -1842,7 +1850,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
 
       if (!messageText) return true;
 
-      const emittedSessionTranscript = sessionFile
+      const sessionTranscriptResult = sessionFile
         ? emitPiSubagentSessionTranscript({
             context,
             providerThreadId,
@@ -1852,8 +1860,13 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             failed,
             raw,
           })
-        : false;
-      if (!emittedSessionTranscript) {
+        : "unavailable";
+      if (
+        shouldEmitPiSubagentFallbackTranscript({
+          transcriptResult: sessionTranscriptResult,
+          messageText,
+        })
+      ) {
         emitPiSubagentChildTranscript({
           context,
           providerThreadId,
@@ -2442,7 +2455,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 ...(childPromptText ? { promptText: childPromptText } : {}),
                 ...(detail ? { messageText: detail } : {}),
               });
-              const emittedSessionTranscript = childSessionFile
+              const sessionTranscriptResult = childSessionFile
                 ? emitPiSubagentSessionTranscript({
                     context,
                     providerThreadId,
@@ -2452,8 +2465,13 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                     failed: event.isError,
                     raw,
                   })
-                : false;
-              if (!emittedSessionTranscript && detail) {
+                : "unavailable";
+              if (
+                shouldEmitPiSubagentFallbackTranscript({
+                  transcriptResult: sessionTranscriptResult,
+                  messageText: detail,
+                })
+              ) {
                 const childName = firstStringValue(receiverAgent, [
                   "agentNickname",
                   "name",

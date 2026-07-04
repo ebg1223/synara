@@ -18,6 +18,7 @@ import {
   piSubagentReceiverAgents,
   recordPiSubagentParentTurnIds,
   recordPiSubagentSessionTranscriptEmission,
+  shouldEmitPiSubagentFallbackTranscript,
 } from "./PiAdapter";
 
 function makePiModel(input: {
@@ -236,7 +237,7 @@ describe("Pi subagent transcript helpers", () => {
         sessionFile: "/tmp/pi-child.jsonl",
         sessionContent: '{"type":"message","id":"one"}\n',
       }),
-    ).toBe(true);
+    ).toBe("recorded");
     expect(
       recordPiSubagentSessionTranscriptEmission({
         emittedTranscripts,
@@ -244,7 +245,7 @@ describe("Pi subagent transcript helpers", () => {
         sessionFile: "/tmp/pi-child.jsonl",
         sessionContent: '{"type":"message","id":"one"}\n',
       }),
-    ).toBe(false);
+    ).toBe("replayed");
     expect(
       recordPiSubagentSessionTranscriptEmission({
         emittedTranscripts,
@@ -252,7 +253,34 @@ describe("Pi subagent transcript helpers", () => {
         sessionFile: "/tmp/pi-child.jsonl",
         sessionContent: '{"type":"message","id":"one"}\n{"type":"message","id":"two"}\n',
       }),
+    ).toBe("recorded");
+  });
+
+  it("only falls back to synthetic transcripts when session import is unavailable", () => {
+    expect(
+      shouldEmitPiSubagentFallbackTranscript({
+        transcriptResult: "unavailable",
+        messageText: "Final child answer",
+      }),
     ).toBe(true);
+    expect(
+      shouldEmitPiSubagentFallbackTranscript({
+        transcriptResult: "replayed",
+        messageText: "Final child answer",
+      }),
+    ).toBe(false);
+    expect(
+      shouldEmitPiSubagentFallbackTranscript({
+        transcriptResult: "emitted",
+        messageText: "Final child answer",
+      }),
+    ).toBe(false);
+    expect(
+      shouldEmitPiSubagentFallbackTranscript({
+        transcriptResult: "unavailable",
+        messageText: "",
+      }),
+    ).toBe(false);
   });
 
   it("keys prompt item ids by child thread and transcript source", () => {
