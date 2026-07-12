@@ -2,7 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- maximum-scale=1 stops mobile Safari's auto-zoom when focusing the composer
+         (any editable with a font-size under 16px triggers it). iOS still honors
+         manual pinch-zoom despite maximum-scale, so this is not an a11y regression.
+         interactive-widget=resizes-content makes Android Chrome shrink the layout
+         viewport when the keyboard opens so h-dvh shells keep the composer visible
+         instead of letting the keyboard cover it. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfcfc" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0e0e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Non-translucent status bar: the OS keeps the webview below the status bar,
+         so the app's 46px top bar never hides under the notch. black-translucent
+         would require safe-area padding across every chrome surface. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Synara" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,6 +44,7 @@
       }
       #root {
         min-height: 100vh;
+        min-height: 100dvh;
       }
       .app-boot-splash {
         position: fixed;

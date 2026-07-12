@@ -10,11 +10,19 @@ import { AppNavigationButtons } from "./AppNavigationButtons";
 import { Button } from "./ui/button";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { useAppSettings } from "~/appSettings";
 import { cn } from "~/lib/utils";
 
 /** Quick entry to the World Cup 2026 ball-physics playground, sat beside the route arrows. */
 function WorldCupButton() {
   const navigate = useNavigate();
+  const { isMobile } = useSidebar();
+  const { settings } = useAppSettings();
+
+  if (isMobile && !settings.showWorldCupButtonOnMobile) {
+    return null;
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger

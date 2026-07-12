@@ -503,6 +503,28 @@ const SIDEBAR_GAP_CLASS =
  *  A sidebar border here draws a full-height vertical line through the titlebar seam. */
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
+/**
+ * Mobile-only: the sidebar renders as an overlay sheet, so unlike the desktop
+ * split-pane it must dismiss itself once the user picks something in it (thread,
+ * workspace, settings — anything that navigates). Watching the router href covers
+ * every selection path without threading close handlers through the sidebar tree.
+ */
+function MobileSidebarAutoDismiss() {
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
+  const href = useLocation({ select: (location) => location.href });
+  const previousHrefRef = useRef(href);
+
+  useEffect(() => {
+    const navigated = previousHrefRef.current !== href;
+    previousHrefRef.current = href;
+    if (navigated && isMobile && openMobile) {
+      setOpenMobile(false);
+    }
+  }, [href, isMobile, openMobile, setOpenMobile]);
+
+  return null;
+}
+
 function ChatRouteLayout() {
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
@@ -534,7 +556,10 @@ function ChatRouteLayout() {
   // would have gotten inside <Sidebar> (otherwise dragging to resize stops working).
   // `data-sidebar-side` on the provider selects the seam geometry.
   const mainContentShell = (
-    <div className="chat-content-card-backing relative flex h-svh min-h-0 min-w-0 flex-1">
+    // h-dvh (not svh): children size with h-dvh (RouteInsetSurface, chat viewport
+    // shell), so the backing must track the same dynamic viewport or the composer's
+    // bottom edge gets clipped on mobile when the browser URL bar collapses (dvh > svh).
+    <div className="chat-content-card-backing relative flex h-dvh min-h-0 min-w-0 flex-1">
       {isEditorView ? null : (
         <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
@@ -554,6 +579,7 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
+      <MobileSidebarAutoDismiss />
       {sidebarElement}
       {mainContentShell}
     </SidebarProvider>

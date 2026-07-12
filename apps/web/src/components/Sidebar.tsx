@@ -5319,6 +5319,11 @@ export default function Sidebar() {
     // name yields to the overlay toolbar; the trailing run dot stays put and fades
     // in place instead of sliding left. Focus is read from the group because the
     // name container itself is not focusable — the row's button is.
+    // Below `md` the toolbar is always visible (no hover), so the row itself
+    // reserves the same 4.75rem statically (see the row's `max-md:pr-[4.75rem]`
+    // below) — that shrinks the flex content box, which naturally pushes both
+    // the truncating name and the trailing status dot/glyph clear of the toolbar
+    // without hiding the status like the desktop hover state does.
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
 
@@ -5339,6 +5344,11 @@ export default function Sidebar() {
               size="sm"
               className={cn(
                 SIDEBAR_HEADER_ROW_CLASS_NAME,
+                // Below `md` the overlay toolbar is always visible (no hover to reveal
+                // it), so the row statically reserves the same 4.75rem the desktop
+                // hover state reserves — this shrinks the row's flex content box so
+                // both the name and the trailing status dot/glyph clear the toolbar.
+                "max-md:pr-[4.75rem]",
                 "hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
                 isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
               )}
@@ -6675,7 +6685,7 @@ export default function Sidebar() {
                     setChatSectionExpanded((current) => !current);
                   }}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                  <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden pr-[4.75rem]">
                     <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79">
                       Chats
                     </span>

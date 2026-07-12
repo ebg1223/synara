@@ -953,6 +953,9 @@ function SettingsRouteView() {
     ...(settings.showWorkspaceSection !== defaults.showWorkspaceSection
       ? ["Workspace section"]
       : []),
+    ...(settings.showWorldCupButtonOnMobile !== defaults.showWorldCupButtonOnMobile
+      ? ["World Cup button on mobile"]
+      : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
@@ -1674,6 +1677,15 @@ function SettingsRouteView() {
             "Show the Workspace tab in the sidebar switcher. The Threads tab always stays visible.",
           resetLabel: "workspace section",
           ariaLabel: "Show the Workspace section in the sidebar",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "showWorldCupButtonOnMobile",
+          title: "World Cup button on mobile",
+          description:
+            "Show the World Cup 2026 easter-egg button in the top chrome on mobile. Always shown on desktop.",
+          resetLabel: "World Cup button on mobile",
+          ariaLabel: "Show the World Cup button on mobile",
         })}
       </SettingsSection>
 

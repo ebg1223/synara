@@ -24,8 +24,11 @@ export function SidebarSectionToolbar({
       className={cn(
         "flex items-center gap-1.5",
         placement === "inline" ? "-mr-1" : "absolute top-1 right-1.5",
+        // Below `md` there is no hover, so the toolbar stays always-visible and
+        // interactive (no touch target should ever be pointer-events-none). At
+        // `md+` it fades in only on hover/focus-visible/open, exactly as before.
         revealOnHover &&
-          "pointer-events-none opacity-100 transition-opacity md:opacity-0 md:group-hover/project-header:pointer-events-auto md:group-hover/project-header:opacity-100 md:group-has-[:focus-visible]/project-header:pointer-events-auto md:group-has-[:focus-visible]/project-header:opacity-100 md:has-[[data-state=open]]:pointer-events-auto md:has-[[data-state=open]]:opacity-100",
+          "pointer-events-auto opacity-100 transition-opacity md:pointer-events-none md:opacity-0 md:group-hover/project-header:pointer-events-auto md:group-hover/project-header:opacity-100 md:group-has-[:focus-visible]/project-header:pointer-events-auto md:group-has-[:focus-visible]/project-header:opacity-100 md:has-[[data-state=open]]:pointer-events-auto md:has-[[data-state=open]]:opacity-100",
         className,
       )}
     >

@@ -24,7 +24,10 @@ import { Schema } from "effect";
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "calc(100vw - var(--spacing(3)))";
+// Runtime inline-style value (not a Tailwind class), so it cannot use the
+// `--spacing(N)` build-time function — `var(--spacing(3))` is invalid CSS and made
+// `width: var(--sidebar-width)` resolve to nothing on the mobile sheet.
+const SIDEBAR_WIDTH_MOBILE = "calc(100vw - 0.75rem)";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 16 * 16;
 

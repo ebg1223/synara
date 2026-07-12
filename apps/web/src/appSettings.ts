@@ -170,6 +170,10 @@ export const AppSettingsSchema = Schema.Struct({
   // enabled in Settings (see the sidebar segmented picker).
   showChatsSection: Schema.Boolean.pipe(withDefaults(() => true)),
   showWorkspaceSection: Schema.Boolean.pipe(withDefaults(() => false)),
+  // Local-only UI preference: hides the World Cup 2026 easter-egg button
+  // (`WorldCupButton`) from the sidebar header/top-chrome navigation controls on
+  // mobile only. Desktop always shows the button regardless of this setting.
+  showWorldCupButtonOnMobile: Schema.Boolean.pipe(withDefaults(() => true)),
   // Local-only UI preferences: which optional sections of the chat Environment panel are
   // shown. The git block (Changes/Worktree/branch/Commit and Push) is always visible; these
   // toggle the sections beneath it via the panel header's gear menu.
