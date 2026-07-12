@@ -701,6 +701,8 @@ function getProviderStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(providerOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
+    case "omp":
+      return normalizeCustomBinaryPath(providerOptions?.omp?.binaryPath);
   }
 }
 
@@ -1783,6 +1785,7 @@ export default function ChatView({
       kilo: resolveHint("kilo"),
       opencode: resolveHint("opencode"),
       pi: resolveHint("pi"),
+      omp: resolveHint("omp"),
     };
   }, [
     activeProject?.defaultModelSelection,
@@ -1804,6 +1807,8 @@ export default function ChatView({
     selectedProvider === "kilo" || lockedProvider === "kilo" || isModelPickerOpen;
   const piModelDiscoveryEnabled =
     selectedProvider === "pi" || lockedProvider === "pi" || isModelPickerOpen;
+  const ompModelDiscoveryEnabled =
+    selectedProvider === "omp" || lockedProvider === "omp" || isModelPickerOpen;
   const cursorDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
       provider: "cursor",
@@ -1849,6 +1854,15 @@ export default function ChatView({
       agentDir: settings.piAgentDir || null,
       cwd: providerModelDiscoveryCwd,
       enabled: piModelDiscoveryEnabled,
+    }),
+  );
+  const ompDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "omp",
+      binaryPath: settings.ompBinaryPath || null,
+      agentDir: settings.ompAgentDir || null,
+      cwd: providerModelDiscoveryCwd,
+      enabled: ompModelDiscoveryEnabled,
     }),
   );
   const claudeDynamicAgentsQuery = useQuery(
@@ -1911,6 +1925,13 @@ export default function ChatView({
     piModelDiscoveryEnabled &&
     !hasResolvedPiModelDiscovery &&
     (piDynamicModelsQuery.isLoading || piDynamicModelsQuery.isFetching);
+  const hasResolvedOmpModelDiscovery =
+    ompDynamicModelsQuery.data?.source?.startsWith("omp.sdk") === true &&
+    (ompDynamicModelsQuery.data.models.length ?? 0) > 0;
+  const ompModelDiscoveryPending =
+    ompModelDiscoveryEnabled &&
+    !hasResolvedOmpModelDiscovery &&
+    (ompDynamicModelsQuery.isLoading || ompDynamicModelsQuery.isFetching);
   const modelOptionsByProvider = useMemo(() => {
     const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
       codex: getAppModelOptions(
@@ -1949,6 +1970,7 @@ export default function ChatView({
         composerModelHintByProvider.opencode,
       ),
       pi: getAppModelOptions("pi", customModelsByProvider.pi, composerModelHintByProvider.pi),
+      omp: getAppModelOptions("omp", customModelsByProvider.omp, composerModelHintByProvider.omp),
     };
     const result: Record<
       ProviderKind,
@@ -1967,6 +1989,7 @@ export default function ChatView({
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      omp: ompDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -1978,6 +2001,7 @@ export default function ChatView({
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -2002,6 +2026,7 @@ export default function ChatView({
     kiloDynamicModelsQuery.data,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    ompDynamicModelsQuery.data,
   ]);
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
@@ -2021,6 +2046,7 @@ export default function ChatView({
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      omp: ompDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -2031,6 +2057,7 @@ export default function ChatView({
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      ompDynamicModelsQuery.data?.models,
     ],
   );
   const providerModelsQueryByProvider = {
@@ -2042,6 +2069,7 @@ export default function ChatView({
     kilo: kiloDynamicModelsQuery,
     opencode: openCodeDynamicModelsQuery,
     pi: piDynamicModelsQuery,
+    omp: ompDynamicModelsQuery,
   } as const;
   const selectedRuntimeModel = useMemo(
     () =>
@@ -2069,6 +2097,13 @@ export default function ChatView({
     composerDraft.modelSelectionByProvider[selectedProvider] ?? null;
   const selectedModelSelection = useMemo<ModelSelection>(() => {
     if (selectedProvider === "pi" && draftModelSelectionForSelectedProvider?.provider === "pi") {
+      return buildModelSelection(
+        selectedProvider,
+        draftModelSelectionForSelectedProvider.model,
+        selectedModelOptionsForDispatch ?? draftModelSelectionForSelectedProvider.options,
+      );
+    }
+    if (selectedProvider === "omp" && draftModelSelectionForSelectedProvider?.provider === "omp") {
       return buildModelSelection(
         selectedProvider,
         draftModelSelectionForSelectedProvider.model,
@@ -2109,15 +2144,18 @@ export default function ChatView({
           ? openCodeModelDiscoveryPending
           : selectedProvider === "pi"
             ? piModelDiscoveryPending
-            : selectedProviderModelsQuery !== undefined &&
-              (selectedProviderModelsQuery.isLoading ||
-                (selectedProviderModelsQuery.isFetching &&
-                  selectedProviderModelsQuery.data === undefined));
+            : selectedProvider === "omp"
+              ? ompModelDiscoveryPending
+              : selectedProviderModelsQuery !== undefined &&
+                (selectedProviderModelsQuery.isLoading ||
+                  (selectedProviderModelsQuery.isFetching &&
+                    selectedProviderModelsQuery.data === undefined));
   const selectedProviderRequiresRuntimeModels =
     selectedProvider === "cursor" ||
     selectedProvider === "kilo" ||
     selectedProvider === "opencode" ||
-    selectedProvider === "pi";
+    selectedProvider === "pi" ||
+    selectedProvider === "omp";
   const selectedProviderRuntimeModelDiscoveryPending =
     selectedProvider === "cursor"
       ? cursorModelDiscoveryPending
@@ -2127,7 +2165,9 @@ export default function ChatView({
           ? openCodeModelDiscoveryPending
           : selectedProvider === "pi"
             ? piModelDiscoveryPending
-            : false;
+            : selectedProvider === "omp"
+              ? ompModelDiscoveryPending
+              : false;
   const showComposerModelBootstrapSkeleton = shouldShowComposerModelBootstrapSkeleton({
     selectedProvider,
     selectedModel,
@@ -2958,7 +2998,12 @@ export default function ChatView({
         selectedProvider === "opencode"
           ? providerOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
-      agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
+      agentDir:
+        selectedProvider === "pi"
+          ? settings.piAgentDir || null
+          : selectedProvider === "omp"
+            ? settings.ompAgentDir || null
+            : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
         supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
@@ -2966,15 +3011,25 @@ export default function ChatView({
     }),
   );
   const canDiscoverProviderSkills =
-    selectedProvider === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
+    selectedProvider === "pi" ||
+    selectedProvider === "omp" ||
+    supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
   const providerSkillsQuery = useQuery(
     providerSkillsQueryOptions({
       provider: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
-      agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
+      agentDir:
+        selectedProvider === "pi"
+          ? settings.piAgentDir || null
+          : selectedProvider === "omp"
+            ? settings.ompAgentDir || null
+            : null,
       enabled:
-        (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
+        (isSkillTrigger ||
+          composerTriggerKind === "slash-command" ||
+          selectedProvider === "pi" ||
+          selectedProvider === "omp") &&
         canDiscoverProviderSkills &&
         composerSkillCwd !== null,
     }),
@@ -8376,6 +8431,7 @@ export default function ChatView({
           kilo: kiloModelDiscoveryPending,
           opencode: openCodeModelDiscoveryPending,
           pi: piModelDiscoveryPending,
+          omp: ompModelDiscoveryPending,
         }}
         hiddenProviders={settings.hiddenProviders}
         providerOrder={settings.providerOrder}
@@ -8417,6 +8473,7 @@ export default function ChatView({
         kilo: kiloModelDiscoveryPending,
         opencode: openCodeModelDiscoveryPending,
         pi: piModelDiscoveryPending,
+        omp: ompModelDiscoveryPending,
       }}
       hiddenProviders={settings.hiddenProviders}
       providerOrder={settings.providerOrder}

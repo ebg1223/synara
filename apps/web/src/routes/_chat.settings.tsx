@@ -222,6 +222,7 @@ const PROVIDER_SELECT_OPTIONS = [
   "opencode",
   "kilo",
   "pi",
+  "omp",
 ] as const satisfies readonly ProviderKind[];
 
 const TIMESTAMP_FORMAT_LABELS = {
@@ -249,7 +250,8 @@ type InstallBinarySettingsKey =
   | "grokBinaryPath"
   | "kiloBinaryPath"
   | "openCodeBinaryPath"
-  | "piBinaryPath";
+  | "piBinaryPath"
+  | "ompBinaryPath";
 type InstallProviderSettings = {
   provider: ProviderKind;
   title: string;
@@ -274,7 +276,7 @@ type InstallProviderSettings = {
   serverPasswordDescription?: ReactNode;
   experimentalWebSocketsKey?: "openCodeExperimentalWebSockets";
   experimentalWebSocketsDescription?: ReactNode;
-  agentDirKey?: "piAgentDir";
+  agentDirKey?: "piAgentDir" | "ompAgentDir";
   agentDirPlaceholder?: string;
   agentDirDescription?: ReactNode;
 };
@@ -288,6 +290,7 @@ const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title
   { provider: "kilo", title: PROVIDER_DISPLAY_NAMES.kilo },
   { provider: "opencode", title: PROVIDER_DISPLAY_NAMES.opencode },
   { provider: "pi", title: PROVIDER_DISPLAY_NAMES.pi },
+  { provider: "omp", title: PROVIDER_DISPLAY_NAMES.omp },
 ];
 
 // Pure helper kept at module scope so the toggle handler stays trivial and the
@@ -512,6 +515,26 @@ const INSTALL_PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
     agentDirDescription:
       "Optional custom Pi agent directory for auth, models, skills, and commands.",
   },
+  {
+    provider: "omp",
+    title: "Oh My Pi",
+    docs: [
+      { label: "Install", href: "https://github.com/can1357/oh-my-pi" },
+      { label: "Docs", href: "https://github.com/can1357/oh-my-pi/tree/main/docs" },
+      { label: "Config", href: "https://github.com/can1357/oh-my-pi/blob/main/docs/settings.md" },
+    ],
+    binaryPathKey: "ompBinaryPath",
+    binaryPlaceholder: "Oh My Pi binary path",
+    binaryDescription: (
+      <>
+        Leave blank to use <code>omp</code> from your PATH.
+      </>
+    ),
+    agentDirKey: "ompAgentDir",
+    agentDirPlaceholder: "Oh My Pi agent directory",
+    agentDirDescription:
+      "Optional custom Oh My Pi agent directory for auth, models, skills, and commands.",
+  },
 ];
 
 // ── Settings UI primitives ────────────────────────────────────────────────
@@ -682,6 +705,7 @@ function SettingsRouteView() {
       settings.openCodeServerPassword,
     ),
     pi: Boolean(settings.piBinaryPath || settings.piAgentDir),
+    omp: Boolean(settings.ompBinaryPath || settings.ompAgentDir),
   });
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
@@ -699,6 +723,7 @@ function SettingsRouteView() {
     kilo: "",
     opencode: "",
     pi: "",
+    omp: "",
   });
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, string | null>>
@@ -759,6 +784,8 @@ function SettingsRouteView() {
   const openCodeServerPassword = settings.openCodeServerPassword;
   const piBinaryPath = settings.piBinaryPath;
   const piAgentDir = settings.piAgentDir;
+  const ompBinaryPath = settings.ompBinaryPath;
+  const ompAgentDir = settings.ompAgentDir;
   const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
   const availableEditors = serverConfigQuery.data?.availableEditors;
   const providerStatusByProvider = useMemo(
@@ -905,7 +932,8 @@ function SettingsRouteView() {
     settings.customGrokModels.length +
     settings.customKiloModels.length +
     settings.customOpenCodeModels.length +
-    settings.customPiModels.length;
+    settings.customPiModels.length +
+    settings.customOmpModels.length;
   const savedCustomModelRows = useMemo(
     () =>
       MODEL_PROVIDER_SETTINGS.flatMap((providerSettings) =>
@@ -937,7 +965,9 @@ function SettingsRouteView() {
     settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
     settings.openCodeServerPassword !== defaults.openCodeServerPassword ||
     settings.piBinaryPath !== defaults.piBinaryPath ||
-    settings.piAgentDir !== defaults.piAgentDir;
+    settings.piAgentDir !== defaults.piAgentDir ||
+    settings.ompBinaryPath !== defaults.ompBinaryPath ||
+    settings.ompAgentDir !== defaults.ompAgentDir;
   const changedSettingLabels = [
     ...(theme !== "system" ? ["Theme"] : []),
     ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
@@ -993,7 +1023,8 @@ function SettingsRouteView() {
     settings.customGrokModels.length > 0 ||
     settings.customKiloModels.length > 0 ||
     settings.customOpenCodeModels.length > 0 ||
-    settings.customPiModels.length > 0
+    settings.customPiModels.length > 0 ||
+    settings.customOmpModels.length > 0
       ? ["Custom models"]
       : []),
     ...(isInstallSettingsDirty ? ["Provider installs"] : []),
@@ -1180,6 +1211,7 @@ function SettingsRouteView() {
       kilo: false,
       opencode: false,
       pi: false,
+      omp: false,
     });
     setSelectedCustomModelProvider("codex");
     setCustomModelInputByProvider({
@@ -1191,6 +1223,7 @@ function SettingsRouteView() {
       kilo: "",
       opencode: "",
       pi: "",
+      omp: "",
     });
     setCustomModelErrorByProvider({});
     setShowAllCustomModels(false);
@@ -2412,6 +2445,7 @@ function SettingsRouteView() {
                     customKiloModels: defaults.customKiloModels,
                     customOpenCodeModels: defaults.customOpenCodeModels,
                     customPiModels: defaults.customPiModels,
+                    customOmpModels: defaults.customOmpModels,
                   });
                   setCustomModelErrorByProvider({});
                   setShowAllCustomModels(false);
@@ -2433,7 +2467,8 @@ function SettingsRouteView() {
                     value !== "grok" &&
                     value !== "kilo" &&
                     value !== "opencode" &&
-                    value !== "pi"
+                    value !== "pi" &&
+                    value !== "omp"
                   ) {
                     return;
                   }
@@ -2721,6 +2756,8 @@ function SettingsRouteView() {
                     openCodeServerPassword: defaults.openCodeServerPassword,
                     piAgentDir: defaults.piAgentDir,
                     piBinaryPath: defaults.piBinaryPath,
+                    ompAgentDir: defaults.ompAgentDir,
+                    ompBinaryPath: defaults.ompBinaryPath,
                   });
                   setOpenInstallProviders({
                     codex: false,
@@ -2731,6 +2768,7 @@ function SettingsRouteView() {
                     kilo: false,
                     opencode: false,
                     pi: false,
+                    omp: false,
                   });
                 }}
               />
@@ -2761,12 +2799,15 @@ function SettingsRouteView() {
                               : providerSettings.provider === "pi"
                                 ? settings.piBinaryPath !== defaults.piBinaryPath ||
                                   settings.piAgentDir !== defaults.piAgentDir
-                                : settings.openCodeBinaryPath !== defaults.openCodeBinaryPath ||
-                                  settings.openCodeExperimentalWebSockets !==
-                                    defaults.openCodeExperimentalWebSockets ||
-                                  settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
-                                  settings.openCodeServerPassword !==
-                                    defaults.openCodeServerPassword;
+                                : providerSettings.provider === "omp"
+                                  ? settings.ompBinaryPath !== defaults.ompBinaryPath ||
+                                    settings.ompAgentDir !== defaults.ompAgentDir
+                                  : settings.openCodeBinaryPath !== defaults.openCodeBinaryPath ||
+                                    settings.openCodeExperimentalWebSockets !==
+                                      defaults.openCodeExperimentalWebSockets ||
+                                    settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
+                                    settings.openCodeServerPassword !==
+                                      defaults.openCodeServerPassword;
                 const binaryPathValue =
                   providerSettings.binaryPathKey === "claudeBinaryPath"
                     ? claudeBinaryPath
@@ -2782,7 +2823,9 @@ function SettingsRouteView() {
                               ? openCodeBinaryPath
                               : providerSettings.binaryPathKey === "piBinaryPath"
                                 ? piBinaryPath
-                                : codexBinaryPath;
+                                : providerSettings.binaryPathKey === "ompBinaryPath"
+                                  ? ompBinaryPath
+                                  : codexBinaryPath;
                 const providerStatus = providerStatusByProvider.get(providerSettings.provider);
                 const showProviderUpdateStatus = providerStatus
                   ? shouldShowProviderUpdateStatus({
@@ -2946,7 +2989,10 @@ function SettingsRouteView() {
                                                 ? { openCodeBinaryPath: nextValue }
                                                 : providerSettings.binaryPathKey === "piBinaryPath"
                                                   ? { piBinaryPath: nextValue }
-                                                  : { codexBinaryPath: nextValue },
+                                                  : providerSettings.binaryPathKey ===
+                                                      "ompBinaryPath"
+                                                    ? { ompBinaryPath: nextValue }
+                                                    : { codexBinaryPath: nextValue },
                                   )
                                 }
                                 placeholder={providerSettings.binaryPlaceholder}
@@ -2993,18 +3039,26 @@ function SettingsRouteView() {
                                 className="block"
                               >
                                 <span className="block text-xs font-medium text-foreground">
-                                  Pi agent directory
+                                  {providerSettings.agentDirKey === "ompAgentDir"
+                                    ? "Oh My Pi agent directory"
+                                    : "Pi agent directory"}
                                 </span>
                                 <DebouncedSettingTextInput
                                   id={`provider-install-${providerSettings.agentDirKey}`}
                                   size="sm"
                                   variant="soft"
                                   className="mt-1"
-                                  value={piAgentDir}
+                                  value={
+                                    providerSettings.agentDirKey === "ompAgentDir"
+                                      ? ompAgentDir
+                                      : piAgentDir
+                                  }
                                   onCommit={(nextValue) =>
-                                    updateSettings({
-                                      piAgentDir: nextValue,
-                                    })
+                                    updateSettings(
+                                      providerSettings.agentDirKey === "ompAgentDir"
+                                        ? { ompAgentDir: nextValue }
+                                        : { piAgentDir: nextValue },
+                                    )
                                   }
                                   placeholder={providerSettings.agentDirPlaceholder}
                                   spellCheck={false}

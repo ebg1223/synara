@@ -6,7 +6,7 @@
 import type { ProviderMentionReference, ProviderSkillReference } from "@t3tools/contracts";
 
 export function skillMentionPrefix(provider: string): string {
-  return provider === "pi" ? "/skill:" : "/";
+  return provider === "pi" || provider === "omp" ? "/skill:" : "/";
 }
 
 export function createComposerMentionTokenRegex(options: {
@@ -40,7 +40,9 @@ export function promptIncludesSkillMention(
 ): boolean {
   const escapedSkillName = escapeRegExp(skillName);
   const prefixes =
-    provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
+    provider === "pi" || provider === "omp"
+      ? [skillMentionPrefix(provider)]
+      : [skillMentionPrefix(provider), "$"];
   return prefixes.some((prefix) => {
     const pattern = new RegExp(`(^|\\s)${escapeRegExp(prefix)}${escapedSkillName}(?=\\s|$)`, "i");
     return pattern.test(prompt);

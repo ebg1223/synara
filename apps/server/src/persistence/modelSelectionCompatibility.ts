@@ -10,6 +10,7 @@ type ModelProviderKind =
   | "gemini"
   | "grok"
   | "kilo"
+  | "omp"
   | "opencode"
   | "pi";
 
@@ -29,6 +30,15 @@ function readTrimmedString(record: Record<string, unknown>, key: string): string
 // Imported instance ids may be runtime names rather than Synara provider literals.
 function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   const lowerLabel = label.toLowerCase();
+  // Check before the pi pattern: "oh-my-pi" would otherwise match as pi.
+  if (
+    /(^|[^a-z0-9])omp([^a-z0-9]|$)/u.test(lowerLabel) ||
+    lowerLabel.includes("oh-my-pi") ||
+    lowerLabel.includes("oh my pi") ||
+    lowerLabel.includes("ohmypi")
+  ) {
+    return "omp";
+  }
   if (/(^|[^a-z0-9])pi([^a-z0-9]|$)/u.test(lowerLabel)) {
     return "pi";
   }
@@ -64,6 +74,7 @@ function inferLegacyModelProvider(provider: unknown, model: string): ModelProvid
     provider === "gemini" ||
     provider === "grok" ||
     provider === "kilo" ||
+    provider === "omp" ||
     provider === "opencode" ||
     provider === "pi"
   ) {

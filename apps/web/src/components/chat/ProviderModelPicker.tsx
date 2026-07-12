@@ -105,7 +105,10 @@ function providerIconClassName(
   provider: ProviderKind | ProviderPickerKind,
   fallbackClassName: string,
 ): string {
-  return provider === "claudeAgent" || provider === "gemini" || provider === "pi"
+  return provider === "claudeAgent" ||
+    provider === "gemini" ||
+    provider === "pi" ||
+    provider === "omp"
     ? "text-foreground"
     : fallbackClassName;
 }
@@ -116,13 +119,18 @@ const FAVORITE_MODEL_STORAGE_KEYS = {
   kilo: "synara:kilo-favourite-models:v1",
   opencode: "synara:opencode-favourite-models:v1",
   pi: "synara:pi-favourite-models:v1",
+  omp: "synara:omp-favourite-models:v1",
 } as const;
 const FavoriteModelSlugs = Schema.Array(Schema.String);
 type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;
 
 function supportsModelFavorites(provider: ProviderKind): provider is FavoriteModelProvider {
   return (
-    provider === "cursor" || provider === "kilo" || provider === "opencode" || provider === "pi"
+    provider === "cursor" ||
+    provider === "kilo" ||
+    provider === "opencode" ||
+    provider === "pi" ||
+    provider === "omp"
   );
 }
 
@@ -213,6 +221,11 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     [],
     FavoriteModelSlugs,
   );
+  const [ompFavoriteModelSlugs, setOmpFavoriteModelSlugs] = useLocalStorage(
+    FAVORITE_MODEL_STORAGE_KEYS.omp,
+    [],
+    FavoriteModelSlugs,
+  );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
   const activeProvider = props.lockedProvider ?? props.provider;
   const hiddenProviders = props.hiddenProviders;
@@ -266,18 +279,24 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
     () => new Set(piFavoriteModelSlugs),
     [piFavoriteModelSlugs],
   );
+  const ompFavoriteModelSlugSet = useMemo(
+    () => new Set(ompFavoriteModelSlugs),
+    [ompFavoriteModelSlugs],
+  );
   const favoriteModelSlugSets = useMemo(
     () => ({
       cursor: cursorFavoriteModelSlugSet,
       kilo: kiloFavoriteModelSlugSet,
       opencode: openCodeFavoriteModelSlugSet,
       pi: piFavoriteModelSlugSet,
+      omp: ompFavoriteModelSlugSet,
     }),
     [
       cursorFavoriteModelSlugSet,
       kiloFavoriteModelSlugSet,
       openCodeFavoriteModelSlugSet,
       piFavoriteModelSlugSet,
+      ompFavoriteModelSlugSet,
     ],
   );
   const handleModelChange = (provider: ProviderKind, value: string) => {
@@ -301,7 +320,9 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
             ? setKiloFavoriteModelSlugs
             : provider === "pi"
               ? setPiFavoriteModelSlugs
-              : setOpenCodeFavoriteModelSlugs;
+              : provider === "omp"
+                ? setOmpFavoriteModelSlugs
+                : setOpenCodeFavoriteModelSlugs;
       setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
     },
     [
@@ -309,6 +330,7 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       setKiloFavoriteModelSlugs,
       setOpenCodeFavoriteModelSlugs,
       setPiFavoriteModelSlugs,
+      setOmpFavoriteModelSlugs,
     ],
   );
 
@@ -331,7 +353,8 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
       (provider === "kilo" ||
         provider === "opencode" ||
         provider === "cursor" ||
-        provider === "pi") &&
+        provider === "pi" ||
+        provider === "omp") &&
       providerOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD;
     const normalizedModelSearchQuery = deferredModelSearchQuery.trim().toLowerCase();
     const filteredOptions =
@@ -372,7 +395,9 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
         <div className="px-2 py-2 text-muted-foreground text-sm">
           {provider === "pi" && normalizedModelSearchQuery.length === 0
             ? "No Pi models found"
-            : "No matches"}
+            : provider === "omp" && normalizedModelSearchQuery.length === 0
+              ? "No Oh My Pi models found"
+              : "No matches"}
         </div>
       );
 

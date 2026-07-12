@@ -136,6 +136,7 @@ export const ProviderModelOptions = Schema.Struct({
   gemini: Schema.optional(GeminiModelOptions),
   grok: Schema.optional(GrokModelOptions),
   kilo: Schema.optional(OpenCodeModelOptions),
+  omp: Schema.optional(PiModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
   pi: Schema.optional(PiModelOptions),
 });
@@ -530,6 +531,7 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       },
     },
   ],
+  omp: [],
   pi: [],
   cursor: [
     {
@@ -593,7 +595,7 @@ export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
 type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[ProviderKind][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
-export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
+export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi" | "omp">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
   codex: "gpt-5.5",
@@ -685,6 +687,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "code-fast": "grok-build-0.1",
   },
   kilo: {},
+  omp: {},
   opencode: {},
   pi: {},
 };
@@ -720,6 +723,7 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   gemini: "Gemini",
   grok: "Grok",
   kilo: "Kilo",
+  omp: "Oh My Pi",
   opencode: "OpenCode",
   pi: "Pi",
 };

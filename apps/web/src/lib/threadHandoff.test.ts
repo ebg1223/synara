@@ -16,6 +16,7 @@ describe("threadHandoff", () => {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("claudeAgent")).toEqual([
       "codex",
@@ -25,6 +26,7 @@ describe("threadHandoff", () => {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("cursor")).toEqual([
       "codex",
@@ -34,6 +36,7 @@ describe("threadHandoff", () => {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("gemini")).toEqual([
       "codex",
@@ -43,6 +46,7 @@ describe("threadHandoff", () => {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("grok")).toEqual([
       "codex",
@@ -52,6 +56,7 @@ describe("threadHandoff", () => {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("kilo")).toEqual([
       "codex",
@@ -61,6 +66,7 @@ describe("threadHandoff", () => {
       "grok",
       "opencode",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("opencode")).toEqual([
       "codex",
@@ -70,6 +76,7 @@ describe("threadHandoff", () => {
       "grok",
       "kilo",
       "pi",
+      "omp",
     ]);
     expect(resolveAvailableHandoffTargetProviders("pi")).toEqual([
       "codex",
@@ -79,6 +86,17 @@ describe("threadHandoff", () => {
       "grok",
       "kilo",
       "opencode",
+      "omp",
+    ]);
+    expect(resolveAvailableHandoffTargetProviders("omp")).toEqual([
+      "codex",
+      "claudeAgent",
+      "cursor",
+      "gemini",
+      "grok",
+      "kilo",
+      "opencode",
+      "pi",
     ]);
   });
 

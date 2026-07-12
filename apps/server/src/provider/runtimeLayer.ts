@@ -13,6 +13,7 @@ import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
 import { makeGeminiAdapterLive } from "./Layers/GeminiAdapter";
 import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
 import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
+import { makeOmpAdapterLive } from "./Layers/OmpAdapter";
 import { makePiAdapterLive } from "./Layers/PiAdapter";
 import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
 import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
@@ -73,6 +74,9 @@ export function makeServerProviderLayer(): Layer.Layer<
       nativeEventLogger ? { nativeEventLogger } : undefined,
     );
     const piAdapterLayer = makePiAdapterLive(nativeEventLogger ? { nativeEventLogger } : undefined);
+    const ompAdapterLayer = makeOmpAdapterLive(
+      nativeEventLogger ? { nativeEventLogger } : undefined,
+    );
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -81,6 +85,7 @@ export function makeServerProviderLayer(): Layer.Layer<
       Layer.provide(grokAdapterLayer),
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
+      Layer.provide(ompAdapterLayer),
       Layer.provide(piAdapterLayer),
       Layer.provideMerge(providerSessionDirectoryLayer),
     );

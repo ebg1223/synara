@@ -213,10 +213,14 @@ function truncateDetail(value: string, limit = 180): string {
   return value.length > limit ? `${value.slice(0, limit - 3)}...` : value;
 }
 
-function stringifyJsonLike(value: unknown): string {
-  const seen = new WeakSet<object>();
+export function stringifyJsonLike(value: unknown): string {
+  // Track ancestors of the node being visited so only true cycles are
+  // replaced: adapters legitimately alias one object under several keys
+  // (e.g. result/rawOutput), and a whole-traversal seen-set would clobber
+  // those shared references with "[Circular]" too.
+  const ancestors: object[] = [];
   return (
-    JSON.stringify(value, (_key, entry) => {
+    JSON.stringify(value, function (this: unknown, _key, entry) {
       if (typeof entry === "bigint") {
         return entry.toString();
       }
@@ -224,10 +228,13 @@ function stringifyJsonLike(value: unknown): string {
         return undefined;
       }
       if (entry && typeof entry === "object") {
-        if (seen.has(entry)) {
+        while (ancestors.length > 0 && (ancestors[ancestors.length - 1] as unknown) !== this) {
+          ancestors.pop();
+        }
+        if (ancestors.includes(entry)) {
           return "[Circular]";
         }
-        seen.add(entry);
+        ancestors.push(entry);
       }
       return entry;
     }) ?? "null"
@@ -387,34 +394,41 @@ function truncateJsonValue(
   if (typeof value === "function" || typeof value === "symbol" || value === undefined) {
     return null;
   }
+  // `seen` holds only the ancestors of the current node (entries are removed
+  // after their subtree is processed) so shared sibling references survive and
+  // only true cycles collapse to "[Circular]".
   const seen = options.seen ?? new WeakSet<object>();
-  if (value && typeof value === "object") {
-    if (seen.has(value)) {
-      return "[Circular]";
-    }
-    seen.add(value);
+  if (seen.has(value as object)) {
+    return "[Circular]";
   }
+  seen.add(value as object);
+  const withSeenReleased = (produced: unknown): unknown => {
+    seen.delete(value as object);
+    return produced;
+  };
   if (options.depth <= 0) {
-    return isJsonObject(value) || Array.isArray(value)
-      ? {
-          [ACTIVITY_DATA_TRUNCATION_MARKER]: true,
-        }
-      : String(value);
+    return withSeenReleased(
+      isJsonObject(value) || Array.isArray(value)
+        ? {
+            [ACTIVITY_DATA_TRUNCATION_MARKER]: true,
+          }
+        : String(value),
+    );
   }
   if (Array.isArray(value)) {
     const retained = value
       .slice(0, options.arrayItems)
-      .map((entry) => truncateJsonValue(entry, { ...options, depth: options.depth - 1 }));
+      .map((entry) => truncateJsonValue(entry, { ...options, seen, depth: options.depth - 1 }));
     if (value.length > options.arrayItems) {
       retained.push({
         [ACTIVITY_DATA_TRUNCATION_MARKER]: true,
         omittedItems: value.length - options.arrayItems,
       });
     }
-    return retained;
+    return withSeenReleased(retained);
   }
   if (!isJsonObject(value)) {
-    return String(value);
+    return withSeenReleased(String(value));
   }
 
   const entries = Object.entries(value)
@@ -429,13 +443,13 @@ function truncateJsonValue(
   const retainedEntries = entries.slice(0, options.objectKeys);
   const result: Record<string, unknown> = {};
   for (const [key, entry] of retainedEntries) {
-    result[key] = truncateJsonValue(entry, { ...options, depth: options.depth - 1 });
+    result[key] = truncateJsonValue(entry, { ...options, seen, depth: options.depth - 1 });
   }
   if (entries.length > options.objectKeys) {
     result[ACTIVITY_DATA_TRUNCATION_MARKER] = true;
     result.omittedKeys = entries.length - options.objectKeys;
   }
-  return result;
+  return withSeenReleased(result);
 }
 
 function boundActivityData(value: unknown): unknown {

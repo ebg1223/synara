@@ -1024,7 +1024,7 @@ describe("TerminalManager", () => {
     } else {
       expect(
         ptyAdapter.spawnInputs.some((input) =>
-          ["/bin/zsh", "/bin/bash", "/bin/sh", "zsh", "bash", "sh"].includes(input.shell),
+          ["zsh", "bash", "sh"].includes(path.basename(input.shell)),
         ),
       ).toBe(true);
     }

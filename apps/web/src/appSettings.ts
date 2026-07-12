@@ -96,7 +96,8 @@ type CustomModelSettingsKey =
   | "customGrokModels"
   | "customKiloModels"
   | "customOpenCodeModels"
-  | "customPiModels";
+  | "customPiModels"
+  | "customOmpModels";
 export type ProviderCustomModelConfig = {
   provider: ProviderKind;
   settingsKey: CustomModelSettingsKey;
@@ -116,6 +117,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
   pi: new Set(getModelOptions("pi").map((option) => option.slug)),
+  omp: new Set(getModelOptions("omp").map((option) => option.slug)),
 };
 
 const withDefaults =
@@ -152,6 +154,8 @@ export const AppSettingsSchema = Schema.Struct({
   openCodeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   piBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   piAgentDir: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  ompBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  ompAgentDir: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   openCodeServerUrl: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   openCodeServerPassword: Schema.String.check(Schema.isMaxLength(4096)).pipe(
     withDefaults(() => ""),
@@ -201,6 +205,7 @@ export const AppSettingsSchema = Schema.Struct({
   customKiloModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpenCodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customPiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customOmpModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   textGenerationProvider: ProviderKind.pipe(withDefaults(() => "codex" as const)),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
@@ -304,6 +309,15 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     defaultSettingsKey: "customPiModels",
     title: "Pi",
     description: "Save additional Pi model slugs for the picker and provider runtime.",
+    placeholder: "provider/model",
+    example: "anthropic/claude-sonnet-4-5",
+  },
+  omp: {
+    provider: "omp",
+    settingsKey: "customOmpModels",
+    defaultSettingsKey: "customOmpModels",
+    title: "Oh My Pi",
+    description: "Save additional Oh My Pi model slugs for the picker and provider runtime.",
     placeholder: "provider/model",
     example: "anthropic/claude-sonnet-4-5",
   },
@@ -418,6 +432,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       settings.openCodeBinaryPath,
     ),
     piBinaryPath: normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath),
+    ompBinaryPath: normalizeProviderBinaryPathOverride("omp", settings.ompBinaryPath),
     uiDensity: normalizeUiDensityValue(settings.uiDensity),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
@@ -430,6 +445,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customKiloModels: normalizeCustomModelSlugs(settings.customKiloModels, "kilo"),
     customOpenCodeModels: normalizeCustomModelSlugs(settings.customOpenCodeModels, "opencode"),
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
+    customOmpModels: normalizeCustomModelSlugs(settings.customOmpModels, "omp"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
     hiddenModels: [],
@@ -457,6 +473,8 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     openCodeServerUrl: settings.providers.opencode.serverUrl,
     piAgentDir: settings.providers.pi.agentDir,
     piBinaryPath: settings.providers.pi.binaryPath,
+    ompAgentDir: settings.providers.omp.agentDir,
+    ompBinaryPath: settings.providers.omp.binaryPath,
     customCodexModels: settings.providers.codex.customModels,
     customClaudeModels: settings.providers.claudeAgent.customModels,
     customCursorModels: settings.providers.cursor.customModels,
@@ -465,6 +483,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customKiloModels: settings.providers.kilo.customModels,
     customOpenCodeModels: settings.providers.opencode.customModels,
     customPiModels: settings.providers.pi.customModels,
+    customOmpModels: settings.providers.omp.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
   };
@@ -494,7 +513,8 @@ function touchesProviderDiscoverySettings(patch: Partial<AppSettings>): boolean 
     hasOwn(patch, "openCodeExperimentalWebSockets") ||
     hasOwn(patch, "openCodeServerPassword") ||
     hasOwn(patch, "openCodeServerUrl") ||
-    hasOwn(patch, "piAgentDir")
+    hasOwn(patch, "piAgentDir") ||
+    hasOwn(patch, "ompAgentDir")
   );
 }
 
@@ -621,6 +641,17 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       ...(hasOwn(patch, "customPiModels") ? { customModels: patch.customPiModels ?? [] } : {}),
     };
   }
+  if (
+    hasOwn(patch, "ompAgentDir") ||
+    hasOwn(patch, "ompBinaryPath") ||
+    hasOwn(patch, "customOmpModels")
+  ) {
+    providers.omp = {
+      ...(hasOwn(patch, "ompAgentDir") ? { agentDir: patch.ompAgentDir ?? "" } : {}),
+      ...(hasOwn(patch, "ompBinaryPath") ? { binaryPath: patch.ompBinaryPath ?? "" } : {}),
+      ...(hasOwn(patch, "customOmpModels") ? { customModels: patch.customOmpModels ?? [] } : {}),
+    };
+  }
 
   if (Object.keys(providers).length > 0) {
     serverPatch.providers = providers;
@@ -657,6 +688,8 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "openCodeServerUrl",
     "piAgentDir",
     "piBinaryPath",
+    "ompAgentDir",
+    "ompBinaryPath",
     "textGenerationModel",
     "textGenerationProvider",
   ] as const) {
@@ -674,6 +707,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "customKiloModels",
     "customOpenCodeModels",
     "customPiModels",
+    "customOmpModels",
   ] as const) {
     if (normalizedSettings[key].length > 0) {
       patch[key] = normalizedSettings[key] as never;
@@ -722,6 +756,7 @@ export function getCustomModelsByProvider(
     kilo: getCustomModelsForProvider(settings, "kilo"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
     pi: getCustomModelsForProvider(settings, "pi"),
+    omp: getCustomModelsForProvider(settings, "omp"),
   };
 }
 
@@ -841,6 +876,7 @@ export function getCustomModelOptionsByProvider(
     kilo: getAppModelOptions("kilo", customModelsByProvider.kilo),
     opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
     pi: getAppModelOptions("pi", customModelsByProvider.pi),
+    omp: getAppModelOptions("omp", customModelsByProvider.omp),
   };
 }
 
@@ -863,6 +899,8 @@ export function getProviderStartOptions(
     | "openCodeServerUrl"
     | "piAgentDir"
     | "piBinaryPath"
+    | "ompAgentDir"
+    | "ompBinaryPath"
   >,
 ): ProviderStartOptions | undefined {
   const claudeBinaryPath = normalizeProviderBinaryPathOverride(
@@ -879,6 +917,7 @@ export function getProviderStartOptions(
     settings.openCodeBinaryPath,
   );
   const piBinaryPath = normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath);
+  const ompBinaryPath = normalizeProviderBinaryPathOverride("omp", settings.ompBinaryPath);
   const hasOpenCodeStartOptions = Boolean(
     openCodeBinaryPath ||
     settings.openCodeExperimentalWebSockets ||
@@ -952,6 +991,14 @@ export function getProviderStartOptions(
           },
         }
       : {}),
+    ...(ompBinaryPath || settings.ompAgentDir
+      ? {
+          omp: {
+            ...(ompBinaryPath ? { binaryPath: ompBinaryPath } : {}),
+            ...(settings.ompAgentDir ? { agentDir: settings.ompAgentDir } : {}),
+          },
+        }
+      : {}),
   };
 
   return Object.keys(providerOptions).length > 0 ? providerOptions : undefined;
@@ -978,6 +1025,7 @@ export function getCustomBinaryPathForProvider(
     | "kiloBinaryPath"
     | "openCodeBinaryPath"
     | "piBinaryPath"
+    | "ompBinaryPath"
   >,
   provider: ProviderKind,
 ): string {
@@ -998,6 +1046,8 @@ export function getCustomBinaryPathForProvider(
       return normalizeProviderBinaryPathOverride(provider, settings.openCodeBinaryPath);
     case "pi":
       return normalizeProviderBinaryPathOverride(provider, settings.piBinaryPath);
+    case "omp":
+      return normalizeProviderBinaryPathOverride(provider, settings.ompBinaryPath);
   }
 }
 

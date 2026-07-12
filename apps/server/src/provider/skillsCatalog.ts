@@ -329,6 +329,7 @@ const HOME_ORIGIN_ORDER = [
   "kilo",
   "opencode",
   "pi",
+  "omp",
   "agents",
 ] as const;
 export type SkillsCatalogOrigin = (typeof HOME_ORIGIN_ORDER)[number] | "project";
@@ -421,6 +422,11 @@ const SKILL_ORIGIN_ROOTS = {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".pi", "agent", "skills")],
     projectRootNames: [".pi"],
   },
+  omp: {
+    // Oh My Pi mirrors Pi's agent-dir layout under ~/.omp.
+    homeRoots: (input) => [nodePath.join(input.homeDir, ".omp", "agent", "skills")],
+    projectRootNames: [".omp"],
+  },
   agents: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".agents", "skills")],
     projectRootNames: [".agents"],
@@ -434,6 +440,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   gemini: ["agents", "gemini"],
   grok: ["grok", "claude", "agents"],
   kilo: ["kilo", "agents", "claude"],
+  omp: ["omp", "pi", "agents"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
 } as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
@@ -489,7 +496,7 @@ function rootsForOrderedOrigins(
     homeRootsForOrigin(origin, input).map((path) => ({
       path,
       scope: origin,
-      ...(origin === "pi" ? { includeMarkdownFiles: true } : {}),
+      ...(origin === "pi" || origin === "omp" ? { includeMarkdownFiles: true } : {}),
     })),
   );
   const homeRootPaths = new Set(homeRoots.map((root) => nodePath.resolve(root.path)));
@@ -516,7 +523,7 @@ function rootsForOrderedOrigins(
           projectRoots.push({
             path: rootPath,
             scope: "project",
-            ...(origin === "pi" ? { includeMarkdownFiles: true } : {}),
+            ...(origin === "pi" || origin === "omp" ? { includeMarkdownFiles: true } : {}),
           });
         }
       }

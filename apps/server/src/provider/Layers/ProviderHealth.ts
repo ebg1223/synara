@@ -112,6 +112,7 @@ const CURSOR_PROVIDER = "cursor" as const;
 const GEMINI_PROVIDER = "gemini" as const;
 const GROK_PROVIDER = "grok" as const;
 const KILO_PROVIDER = "kilo" as const;
+const OMP_PROVIDER = "omp" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
@@ -124,6 +125,7 @@ const PROVIDERS = [
   GEMINI_PROVIDER,
   GROK_PROVIDER,
   KILO_PROVIDER,
+  OMP_PROVIDER,
   OPENCODE_PROVIDER,
   PI_PROVIDER,
 ] as const satisfies ReadonlyArray<ProviderKind>;
@@ -1453,10 +1455,12 @@ export const checkKiloProviderStatus = makeCheckKiloProviderStatus();
 export const checkPiProviderStatus = (
   agentDir?: string,
   binaryPath?: string,
+  provider: typeof PI_PROVIDER | typeof OMP_PROVIDER = PI_PROVIDER,
 ): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
-    const executable = nonEmptyTrimmed(binaryPath) ?? "pi";
+    const displayName = provider === OMP_PROVIDER ? "Oh My Pi" : "Pi";
+    const executable = nonEmptyTrimmed(binaryPath) ?? (provider === OMP_PROVIDER ? "omp" : "pi");
 
     const versionProbe = yield* runPiCommand(["--version"], executable).pipe(
       Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
@@ -1467,27 +1471,30 @@ export const checkPiProviderStatus = (
     // refreshes do not import the SDK and initialize its native clipboard module.
     if (Result.isFailure(versionProbe)) {
       const error = versionProbe.failure;
+      const missingMessage =
+        provider === PI_PROVIDER
+          ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so Synara could not verify the installed CLI version."
+          : `${displayName} CLI (\`${executable}\`) is not on PATH, so Synara could not verify the installed CLI version.`;
       return {
-        provider: PI_PROVIDER,
+        provider,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
         checkedAt,
         message: isCommandMissingCause(error)
-          ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so Synara could not verify the installed CLI version."
-          : `Pi SDK is bundled, but the CLI health check failed: ${error instanceof Error ? error.message : String(error)}.`,
+          ? missingMessage
+          : `${displayName} CLI health check failed: ${error instanceof Error ? error.message : String(error)}.`,
       } satisfies ServerProviderStatus;
     }
 
     if (Option.isNone(versionProbe.success)) {
       return {
-        provider: PI_PROVIDER,
+        provider,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
         checkedAt,
-        message:
-          "Pi SDK is bundled, but the CLI health check timed out before Synara could verify the installed version.",
+        message: `${displayName} CLI health check timed out before Synara could verify the installed version.`,
       } satisfies ServerProviderStatus;
     }
 
@@ -1495,29 +1502,29 @@ export const checkPiProviderStatus = (
     if (version.code !== 0) {
       const detail = detailFromResult(version);
       return {
-        provider: PI_PROVIDER,
+        provider,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
         checkedAt,
         message: detail
-          ? `Pi SDK is bundled, but the CLI health check failed. ${detail}`
-          : "Pi SDK is bundled, but the CLI health check failed.",
+          ? `${displayName} CLI health check failed. ${detail}`
+          : `${displayName} CLI health check failed.`,
       } satisfies ServerProviderStatus;
     }
 
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
     const configuredAgentDir = nonEmptyTrimmed(agentDir);
     return {
-      provider: PI_PROVIDER,
+      provider,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
       version: parsedVersion,
       checkedAt,
       message: configuredAgentDir
-        ? `Pi CLI is installed. Synara will use Pi agent dir ${configuredAgentDir}.`
-        : "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
+        ? `${displayName} CLI is installed. Synara will use Pi agent dir ${configuredAgentDir}.`
+        : `${displayName} CLI is installed. Configure provider credentials inside ${displayName} as needed.`,
     } satisfies ServerProviderStatus;
   });
 
@@ -1990,6 +1997,8 @@ export const ProviderHealthLive = Layer.effect(
           return settings.providers.grok.binaryPath;
         case "kilo":
           return settings.providers.kilo.binaryPath;
+        case "omp":
+          return settings.providers.omp.binaryPath;
         case "opencode":
           return settings.providers.opencode.binaryPath;
         case "pi":
@@ -2033,7 +2042,7 @@ export const ProviderHealthLive = Layer.effect(
           });
         }
         return yield* resolveProviderMaintenanceCapabilitiesEffect(definition, {
-          binaryPath: getProviderBinaryPath(provider, settings),
+          binaryPath: getProviderBinaryPath(provider, settings) ?? null,
           env: process.env,
           platform: process.platform,
         }).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem));
@@ -2188,6 +2197,15 @@ export const ProviderHealthLive = Layer.effect(
                 settings,
                 KILO_PROVIDER,
                 makeCheckKiloProviderStatus(settings.providers.kilo.binaryPath),
+              ),
+              checkProviderWhenEnabled(
+                settings,
+                OMP_PROVIDER,
+                checkPiProviderStatus(
+                  settings.providers.omp.agentDir,
+                  settings.providers.omp.binaryPath,
+                  OMP_PROVIDER,
+                ),
               ),
               checkProviderWhenEnabled(
                 settings,

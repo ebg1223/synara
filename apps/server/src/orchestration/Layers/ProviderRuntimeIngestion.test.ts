@@ -33,7 +33,7 @@ import {
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
-import { ProviderRuntimeIngestionLive } from "./ProviderRuntimeIngestion.ts";
+import { ProviderRuntimeIngestionLive, stringifyJsonLike } from "./ProviderRuntimeIngestion.ts";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -4303,5 +4303,30 @@ describe("ProviderRuntimeIngestion", () => {
     );
     expect(thread.session?.status).toBe("error");
     expect(thread.session?.lastError).toBe("runtime still processed");
+  });
+});
+
+describe("stringifyJsonLike", () => {
+  it("preserves shared references and only collapses true cycles", () => {
+    const shared = { output: "agent finished" };
+    expect(JSON.parse(stringifyJsonLike({ result: shared, rawOutput: shared }))).toEqual({
+      result: { output: "agent finished" },
+      rawOutput: { output: "agent finished" },
+    });
+
+    const cyclic: Record<string, unknown> = { name: "wait" };
+    cyclic.self = cyclic;
+    expect(JSON.parse(stringifyJsonLike(cyclic))).toEqual({
+      name: "wait",
+      self: "[Circular]",
+    });
+  });
+
+  it("preserves repeated references inside arrays", () => {
+    const entry = { id: "agent-1" };
+    expect(JSON.parse(stringifyJsonLike([entry, entry]))).toEqual([
+      { id: "agent-1" },
+      { id: "agent-1" },
+    ]);
   });
 });

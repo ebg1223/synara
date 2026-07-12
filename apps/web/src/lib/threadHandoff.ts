@@ -26,6 +26,7 @@ const HANDOFF_PROVIDER_ORDER: ReadonlyArray<ProviderKind> = [
   "kilo",
   "opencode",
   "pi",
+  "omp",
 ];
 const IMPORTABLE_THREAD_ACTIVITY_KINDS = new Set([
   "account.rate-limits.updated",
@@ -173,7 +174,11 @@ export function resolveThreadHandoffModelSelection(input: {
   }
   const defaultModel = getDefaultModel(input.targetProvider);
   if (!defaultModel) {
-    throw new Error("Select a Pi model before handing off to Pi.");
+    throw new Error(
+      input.targetProvider === "omp"
+        ? "Select an Oh My Pi model before handing off to Oh My Pi."
+        : "Select a Pi model before handing off to Pi.",
+    );
   }
   return {
     provider: input.targetProvider,

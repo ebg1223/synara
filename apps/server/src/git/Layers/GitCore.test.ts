@@ -103,7 +103,7 @@ function runTruncatedNodeCommand(input: {
   maxOutputBytes?: number;
 }): Effect.Effect<ProcessRunResult, Error> {
   return Effect.promise(() =>
-    runProcess("node", ["-e", "process.stdout.write('x'.repeat(2000))"], {
+    runProcess("bun", ["-e", "process.stdout.write('x'.repeat(2000))"], {
       cwd: input.cwd,
       timeoutMs: input.timeoutMs ?? 30_000,
       allowNonZeroExit: true,

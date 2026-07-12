@@ -115,6 +115,15 @@ export function useProviderModelCatalog(input: {
       enabled: selectedProvider === "pi" || discoveryEnabled,
     }),
   );
+  const ompDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "omp",
+      binaryPath: settings.ompBinaryPath || null,
+      agentDir: settings.ompAgentDir || null,
+      cwd: discoveryCwd,
+      enabled: selectedProvider === "omp" || discoveryEnabled,
+    }),
+  );
 
   // Agent/mode discovery (kilo/opencode "Mode"/"Agent" picker, claude/codex subagents).
   const claudeDynamicAgentsQuery = useQuery(
@@ -186,6 +195,14 @@ export function useProviderModelCatalog(input: {
     piModelDiscoveryEnabled &&
     !hasResolvedPiModelDiscovery &&
     (piDynamicModelsQuery.isLoading || piDynamicModelsQuery.isFetching);
+  const ompModelDiscoveryEnabled = selectedProvider === "omp" || discoveryEnabled;
+  const hasResolvedOmpModelDiscovery =
+    ompDynamicModelsQuery.data?.source?.startsWith("omp.sdk") === true &&
+    (ompDynamicModelsQuery.data.models.length ?? 0) > 0;
+  const ompModelDiscoveryPending =
+    ompModelDiscoveryEnabled &&
+    !hasResolvedOmpModelDiscovery &&
+    (ompDynamicModelsQuery.isLoading || ompDynamicModelsQuery.isFetching);
 
   const modelOptionsByProvider = useMemo(() => {
     const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
@@ -213,6 +230,7 @@ export function useProviderModelCatalog(input: {
         modelHintByProvider?.opencode,
       ),
       pi: getAppModelOptions("pi", customModelsByProvider.pi, modelHintByProvider?.pi),
+      omp: getAppModelOptions("omp", customModelsByProvider.omp, modelHintByProvider?.omp),
     };
     const result: Record<
       ProviderKind,
@@ -231,6 +249,7 @@ export function useProviderModelCatalog(input: {
       kilo: kiloDynamicModelsQuery.data,
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
+      omp: ompDynamicModelsQuery.data,
     };
 
     for (const provider of [
@@ -242,6 +261,7 @@ export function useProviderModelCatalog(input: {
       "kilo",
       "opencode",
       "pi",
+      "omp",
     ] as const) {
       const dynamicModels = dynamicSources[provider]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
@@ -266,6 +286,7 @@ export function useProviderModelCatalog(input: {
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
+    ompDynamicModelsQuery.data,
   ]);
 
   const loadingModelProviders = useMemo<Partial<Record<ProviderKind, boolean>>>(
@@ -274,12 +295,14 @@ export function useProviderModelCatalog(input: {
       kilo: kiloModelDiscoveryPending,
       opencode: openCodeModelDiscoveryPending,
       pi: piModelDiscoveryPending,
+      omp: ompModelDiscoveryPending,
     }),
     [
       cursorModelDiscoveryPending,
       kiloModelDiscoveryPending,
       openCodeModelDiscoveryPending,
       piModelDiscoveryPending,
+      ompModelDiscoveryPending,
     ],
   );
 
@@ -295,6 +318,7 @@ export function useProviderModelCatalog(input: {
       kilo: kiloDynamicModelsQuery.data?.models ?? [],
       opencode: openCodeDynamicModelsQuery.data?.models ?? [],
       pi: piDynamicModelsQuery.data?.models ?? [],
+      omp: ompDynamicModelsQuery.data?.models ?? [],
     }),
     [
       claudeDynamicModelsQuery.data?.models,
@@ -305,6 +329,7 @@ export function useProviderModelCatalog(input: {
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
+      ompDynamicModelsQuery.data?.models,
     ],
   );
 

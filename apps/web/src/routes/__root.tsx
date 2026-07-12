@@ -1360,6 +1360,15 @@ function EventRouter() {
         void queryClient.invalidateQueries({
           queryKey: ["provider-discovery", "models", "cursor"],
         });
+        // Pi-family model lists come from the runtime binary and change on
+        // login/auth: without invalidation a "no models found" result sticks
+        // until the TTL even after the user authenticates.
+        void queryClient.invalidateQueries({
+          queryKey: ["provider-discovery", "models", "pi"],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["provider-discovery", "models", "omp"],
+        });
         void queryClient.invalidateQueries({
           queryKey: providerDiscoveryQueryKeys.agentsForProvider("kilo"),
         });

@@ -55,6 +55,7 @@ export const ProviderKind = Schema.Literals([
   "gemini",
   "grok",
   "kilo",
+  "omp",
   "opencode",
   "pi",
 ]);
@@ -130,6 +131,14 @@ export const PiModelSelection = Schema.Struct({
 });
 export type PiModelSelection = typeof PiModelSelection.Type;
 
+// Oh My Pi is a Pi fork and shares Pi's thinking-level model options.
+export const OmpModelSelection = Schema.Struct({
+  provider: Schema.Literal("omp"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(PiModelOptions),
+});
+export type OmpModelSelection = typeof OmpModelSelection.Type;
+
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   ClaudeModelSelection,
@@ -137,6 +146,7 @@ export const ModelSelection = Schema.Union([
   GeminiModelSelection,
   GrokModelSelection,
   KiloModelSelection,
+  OmpModelSelection,
   OpenCodeModelSelection,
   PiModelSelection,
 ]);
@@ -184,6 +194,11 @@ export const PiProviderStartOptions = Schema.Struct({
   agentDir: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const OmpProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  agentDir: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
@@ -191,6 +206,7 @@ export const ProviderStartOptions = Schema.Struct({
   gemini: Schema.optional(GeminiProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
   kilo: Schema.optional(KiloProviderStartOptions),
+  omp: Schema.optional(OmpProviderStartOptions),
   opencode: Schema.optional(OpenCodeProviderStartOptions),
   pi: Schema.optional(PiProviderStartOptions),
 });

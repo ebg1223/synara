@@ -58,6 +58,14 @@ const MODEL_OPTIONS_BY_PROVIDER = {
       upstreamProviderName: "Anthropic",
     },
   ],
+  omp: [
+    {
+      slug: "anthropic/claude-sonnet-4-5",
+      name: "Claude Sonnet 4.5 (OMP)",
+      upstreamProviderId: "anthropic",
+      upstreamProviderName: "Anthropic",
+    },
+  ],
 } as const satisfies Record<ProviderKind, ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>>;
 
 const MANY_OPENCODE_MODELS = Array.from({ length: 16 }, (_, index) => ({

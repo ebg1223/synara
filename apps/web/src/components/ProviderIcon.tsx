@@ -71,6 +71,7 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
   kilo: KiloIcon,
   opencode: OpenCodeProviderIcon,
   pi: PiIcon,
+  omp: PiIcon,
 };
 
 export function providerIconToneClassName(

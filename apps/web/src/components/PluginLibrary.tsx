@@ -94,6 +94,7 @@ const PROVIDER_DISCOVERY_ORDER: ReadonlyArray<ProviderKind> = [
   "kilo",
   "opencode",
   "pi",
+  "omp",
 ];
 const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   canva: { icon: SiCanva, color: "#00C4CC" },
@@ -401,6 +402,7 @@ export function PluginLibrary() {
   const kiloCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("kilo"));
   const openCodeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("opencode"));
   const piCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("pi"));
+  const ompCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("omp"));
 
   const providerCapabilities = useMemo<Record<ProviderKind, ProviderCapabilities>>(
     () => ({
@@ -436,6 +438,10 @@ export function PluginLibrary() {
         plugins: supportsPluginDiscovery(piCapabilitiesQuery.data),
         skills: supportsSkillDiscovery(piCapabilitiesQuery.data),
       },
+      omp: {
+        plugins: supportsPluginDiscovery(ompCapabilitiesQuery.data),
+        skills: supportsSkillDiscovery(ompCapabilitiesQuery.data),
+      },
     }),
     [
       claudeCapabilitiesQuery.data,
@@ -446,6 +452,7 @@ export function PluginLibrary() {
       kiloCapabilitiesQuery.data,
       openCodeCapabilitiesQuery.data,
       piCapabilitiesQuery.data,
+      ompCapabilitiesQuery.data,
     ],
   );
 

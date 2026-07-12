@@ -30,6 +30,7 @@ const RuntimeEventRawSource = Schema.Literals([
   "acp.jsonrpc",
   "acp.cursor.extension",
   "kilo.sdk.event",
+  "omp.rpc.event",
   "opencode.sdk.event",
   "pi.sdk.event",
 ]);
